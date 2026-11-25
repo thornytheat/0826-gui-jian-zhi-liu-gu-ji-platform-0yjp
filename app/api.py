@@ -4,10 +4,10 @@ from app.business import DomainIssue
 from app.evidence.render import artifact
 from app.inputs import read_input
 from app.modules.pipeline import run
-from app.review.service import execute, review
+from app.review.service import confirm_dispatch, execute, review
 
 api = Blueprint('api',__name__,url_prefix='/api')
-STAGES = {'intake':1,'prepare':2,'calculate':3,'policy':4,'balance':5}
+STAGES = {'intake':1,'prepare':2,'calculate':3,'policy':4,'balance':5,'dispatch':6}
 
 
 @api.post('/stages/<stage>')
@@ -40,3 +40,18 @@ def export(run_id):
         'Content-Disposition':f'attachment; filename="review-{report["id"][:12]}.json"',
         'Cache-Control':'no-store',
     })
+
+
+@api.post('/runs/<run_id>/dispatch')
+def confirm(run_id):
+    return jsonify(confirm_dispatch(current_app.extensions['runs'],run_id))
+
+
+@api.get('/dispatches')
+def dispatch_list():
+    return jsonify(items=current_app.extensions['runs'].dispatches())
+
+
+@api.get('/dispatches/<night>')
+def dispatch_night(night):
+    return jsonify(current_app.extensions['runs'].dispatch(night))

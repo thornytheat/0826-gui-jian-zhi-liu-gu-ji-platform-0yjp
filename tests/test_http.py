@@ -3,7 +3,7 @@ import io
 import pytest
 
 
-@pytest.mark.parametrize('stage',['intake','prepare','calculate','policy','balance'])
+@pytest.mark.parametrize('stage',['intake','prepare','calculate','policy','balance','dispatch'])
 def test_stage_has_http_entry_and_no_database_write(client,stage):
     response=client.post('/api/stages/'+stage,data={'sample':'dirty'})
     assert response.status_code==200 and response.json['intake']['rejected']==5

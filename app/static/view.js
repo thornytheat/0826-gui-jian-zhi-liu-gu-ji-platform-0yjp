@@ -1,6 +1,8 @@
 import {element} from './client.js';
 
-const labels = {READY:'通过', MISMATCH:'数值不符', PENDING:'待复核', APPROVED:'已签发', HELD:'已暂缓',
+export const labels = {READY:'通过', MISMATCH:'数值不符', PENDING:'待复核', APPROVED:'已签发', HELD:'已暂缓',
+  ROBUST_FIRST:'稳健第一', FIRST_UNDECIDED:'首位可能易主或并列', BAD_ROWS:'对账发现坏行',
+  HORIZON_MISMATCH:'约定时长不一致', NO_STATIONS:'无有效站点', NIGHT_DISPATCHED:'当晚已确认调拨',
   INVALID_EQUIVALENCE:'互认条件无效', CREDIT_SHORTFALL:'学分不足', TICKET_MISMATCH:'联单信息不符',
   CONTAMINATION_LIMIT:'杂质率超限', DATA_POSITION_CONFLICT:'数据位置冲突', DANGLING_POSITION:'悬空位置删除',
   LINEAGE_CYCLE:'字段依赖成环', LABEL_TOO_LOW:'分级低于来源', DEPENDENCY_CYCLE:'任务依赖成环',
@@ -88,6 +90,13 @@ export function snapshot(report, selected, stage) {
       tr.append(...[item.line,item.record,item.case,item.reason].map(value=>element('td',value)));
     }
     if (!stats.isolation.length) body.insertRow().insertCell().textContent = '当前文件没有隔离行';
+  } else if (stage === 'dispatch' && report.dispatch) {
+    head.append(...['站点', '队列', '已知滞留', '结果未知', '留存区间(基点)'].map(title => element('th', title, {scope:'col'})));
+    for (const row of report.dispatch.stations) {
+      const tr = body.insertRow();
+      [row.case, row.cohort, row.known, row.unknown, `${row.low_bp}–${row.high_bp}`].forEach(value=>tr.insertCell().textContent=value);
+    }
+    if (!report.dispatch.stations.length) body.insertRow().insertCell().textContent = '没有进入计算的站点';
   } else {
     head.append(...headers.map(title => element('th', title, {scope:'col'})));
     for (const row of report.cases || []) {
@@ -99,6 +108,13 @@ export function snapshot(report, selected, stage) {
     }
   }
   table.createTHead().append(head);
+  if (stage === 'dispatch' && report.dispatch) {
+    const d = report.dispatch;
+    document.querySelector('#detail-title').textContent = '调拨决策';
+    document.querySelector('#detail').replaceChildren(detailValue({去向: d.destination || '留库', 原因: labels[d.reason] || d.reason, 约定时长: d.horizon ?? '—'}));
+    document.querySelector('#counts').textContent = `站点 ${d.stations.length} · 去向 ${d.destination || '留库'}`;
+    return;
+  }
   const picked = report.cases?.find(row=>row.case===selected);
   document.querySelector('#detail-title').textContent = picked ? `分组 ${picked.case}` : '采信摘要';
   const shown = picked ? picked.measure?.evidence ?? picked.prep?.details ?? {原因:picked.status} : stats.reasons;

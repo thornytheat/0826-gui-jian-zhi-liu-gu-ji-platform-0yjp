@@ -40,3 +40,12 @@ def review(store, run_id, values):
     if status == 'APPROVED' and not current['report']['balance']['releasable']:
         raise DomainIssue('UNRESOLVED_ISSUES')
     return store.revise(run_id,revision,status,note.strip(),now())
+
+
+def confirm_dispatch(store, run_id):
+    current = store.load(run_id)
+    proposal = current['report'].get('dispatch')
+    if proposal is None:
+        raise DomainIssue('DISPATCH_NOT_FOUND')
+    night = current['report']['manifest']['created'][:10]
+    return store.confirm(night,proposal['destination'],proposal['reason'],run_id,now())

@@ -1,5 +1,5 @@
 import {request} from './client.js';
-import {snapshot, history} from './view.js';
+import {snapshot, history, labels} from './view.js';
 import {visualize} from './plots.js';
 
 const form = document.querySelector('#source');
@@ -9,6 +9,9 @@ const status = document.querySelector('#notice');
 const detail = document.querySelector('#review');
 const evidence = document.querySelector('#evidence');
 const stages = [...document.querySelectorAll('[data-stage]')];
+const dispatchNight = document.querySelector('#dispatch-night');
+const dispatchProposal = document.querySelector('#dispatch-proposal');
+const dispatchConfirm = document.querySelector('#dispatch-confirm');
 let stage = 'balance';
 let report, selected, batch, running = false;
 
@@ -24,6 +27,12 @@ function announce(text, failure = false) {
   status.dataset.failure = String(failure);
 }
 
+function renderDispatch(record) {
+  dispatchNight.textContent = record
+    ? `${record.night} · 去向 ${record.destination || '留库'} · ${labels[record.reason] || record.reason}`
+    : '尚未确认当晚调拨';
+}
+
 function draw() {
   if (!report) return;
   snapshot(report, selected, stage);
@@ -37,6 +46,10 @@ function draw() {
     detail.querySelector('[value="HELD"]').disabled = batch.status==='APPROVED';
     evidence.href = `/api/runs/${batch.id}/evidence`;
   }
+  const proposal = batch && report.dispatch;
+  dispatchConfirm.disabled = !proposal;
+  dispatchProposal.hidden = !proposal;
+  if (proposal) dispatchProposal.textContent = `本批建议：${report.dispatch.destination || '留库'} · ${labels[report.dispatch.reason] || report.dispatch.reason}`;
 }
 
 function show(payload, committed = false) {
@@ -50,6 +63,8 @@ function show(payload, committed = false) {
 async function refresh() {
   const data = await request('/api/runs');
   history(data.items, batch?.id);
+  const dispatches = await request('/api/dispatches');
+  renderDispatch(dispatches.items[0]);
 }
 
 async function perform(action) {
@@ -101,6 +116,14 @@ detail.addEventListener('submit',event=>{
     const payload={status:event.submitter.value,revision:batch.revision,note:detail.elements.note.value};
     const result=await request(`/api/runs/${batch.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     show(result,true); announce(result.status==='APPROVED'?'批次已签发':'批次已暂缓'); await refresh();
+  });
+});
+dispatchConfirm.addEventListener('click',()=>{
+  if (!batch) return;
+  perform(async()=>{
+    const record=await request(`/api/runs/${batch.id}/dispatch`,{method:'POST'});
+    renderDispatch(record);
+    announce(record.destination?`当晚调拨已确认：${record.destination}`:'当晚已确认留库');
   });
 });
 preview(stage);

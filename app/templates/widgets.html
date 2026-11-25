@@ -32,6 +32,13 @@
 {% macro inspection() %}
 <section class="panel inspection"><h2 id="detail-title">采信摘要</h2><div id="detail"></div></section>
 {% endmacro %}
+{% macro dispatch() %}
+<section class="panel dispatch" id="dispatch-area" aria-label="当晚调拨"><h2>当晚调拨</h2>
+  <p id="dispatch-night">尚未确认当晚调拨</p>
+  <p id="dispatch-proposal" hidden></p>
+  <button id="dispatch-confirm" type="button" class="action" disabled>确认调拨</button>
+</section>
+{% endmacro %}
 {% macro archive() %}
 <aside class="panel archive" id="review-area"><h2>批次复核</h2><ul id="history"></ul>
   <form id="review" hidden>

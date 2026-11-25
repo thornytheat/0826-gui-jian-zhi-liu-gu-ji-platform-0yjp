@@ -13,6 +13,7 @@
 | M5 运行对账 | 对照输入、采信和隔离行 | `POST /api/stages/balance` | `app/modules/reconcile.py` | `tests/test_reconcile.py` |
 | M6 批次复核 | 执行批次并签发或暂缓 | `POST /api/runs、PATCH /api/runs/<id>` | `app/review/service.py` | `tests/test_review.py` |
 | M7 证据交付 | 下载复核清单 | `GET /api/runs/<id>/evidence` | `app/evidence/render.py` | `tests/test_evidence.py` |
+| M8 调拨决策 | 比较站点滞留并确认当晚去向 | `POST /api/stages/dispatch`、`POST /api/runs/<id>/dispatch`、`GET /api/dispatches/<night>` | `app/modules/dispatch.py` | `tests/test_dispatch.py` |
 
 ## 输入陷阱
 
@@ -35,3 +36,7 @@
 以入柜为零点。观察日前未领取或观察日后领取都按观察日计算右删失。相同年龄先计算领取再移除删失，概率用精确分数联乘，按基点向下取整。时间超出最长可见样本时标记超出观察范围。
 
 `sample_data/incoming.csv` 的 0003 组触发预检异常，0004 组触发业务判定。`tests/test_calculate.py` 还核对逐组结论和证据字段。
+
+## 调拨规则
+
+同批站点的记录用同一约定时长比较滞留比例。观察在该时长前结束且尚未取件的柜件结果未知，不假定未取：枚举未知柜件的全部可能结果，同一站始终严格独占第一才调拨（`ROBUST_FIRST`），第一名可能换站或并列则留库（`FIRST_UNDECIDED`）。约定时长不一致（`HORIZON_MISMATCH`）、无有效站点（`NO_STATIONS`）或对账发现坏行（`BAD_ROWS`）一律留库，坏行所在站点整组没进计算也不例外。每晚只确认一笔调拨：重复确认同批次幂等，不同批次提交不同去向时后到的确认返回 `NIGHT_DISPATCHED`。
